@@ -10,7 +10,7 @@
 
 2. **Stand up a Redis instance** reachable from every backend server (a single small instance is enough at this scale; see `docs/SCALING.md`).
 
-3. **Build the plugin**: `./gradlew shadowJar` (requires internet access to download dependencies).
+3. **Build the plugin**: `./gradlew shadowJar`.
 
 4. **Configure every backend server identically**, except for `server-id`, which must be unique per node (e.g. `survival-1`, `survival-2`, `skyblock-1`). Point `database.*` and `redis.*` at the same shared instances from step 1/2 on every node.
 
