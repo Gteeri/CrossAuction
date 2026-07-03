@@ -1,0 +1,36 @@
+prefix: "<gray>[<gold>Auction</gold>]</gray> "
+
+no-permission: "<red>You don't have permission to do that."
+player-only: "<red>Only players can use this."
+unknown-command: "<red>Unknown usage. Try /auction sell <price>, /auction auction <price>, /auction cancel <id>, /auction collect, /auction search <query>."
+cooldown: "<red>Please wait a moment before doing that again."
+chat-input-prompt: "<yellow>Type {prompt} in chat."
+items-waiting: "<yellow>You have {count} item(s)/payout(s) waiting on the auction house! Use /auction collect."
+
+listing-created: "<green>Listed <white>{item}</white> for <yellow>{price}</yellow>."
+listing-created-error: "<red>Failed to create listing: {reason}"
+listing-not-found: "<red>That listing no longer exists."
+listing-limit-reached: "<red>You have too many active listings."
+invalid-price: "<red>Enter a price between {min} and {max}."
+must-hold-item: "<red>Hold the item you want to list in your hand."
+
+bought-item: "<green>You bought <white>{item}</white> for <yellow>{price}</yellow>."
+sold-item: "<green>Your listing <white>{item}</white> sold for <yellow>{price}</yellow>!"
+not-enough-money: "<red>You don't have enough money for that."
+cannot-buy-own: "<red>You can't buy or bid on your own listing."
+
+bid-placed: "<green>Bid placed on <white>{item}</white>."
+bid-too-low: "<red>Your bid must be higher than the current bid plus the minimum increment."
+outbid: "<red>You were outbid on <white>{item}</white>! Your money has been refunded."
+
+cancelled: "<green>Listing cancelled, check /auction collect for your item."
+cannot-cancel: "<red>You can't cancel that listing."
+
+collect-none: "<gray>You have nothing to collect right now."
+collect-success: "<green>Collected {count} item(s)/payout(s)."
+inventory-full-dropped: "<yellow>Your inventory was full, the item was dropped at your feet."
+expired-returned: "<yellow>Your listing for <white>{item}</white> expired and was returned to your collect inbox."
+
+reloaded: "<green>CrossAuction configuration reloaded."
+admin-listing-removed: "<green>Removed listing #{id}."
+search-header: "<gray>Search results for '{query}':"

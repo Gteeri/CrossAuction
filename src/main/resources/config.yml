@@ -1,0 +1,50 @@
+# Unique identifier for THIS backend server. Must be different on every node
+# in the network, but every other setting below should point at the SAME
+# shared MySQL/Redis instances across all nodes.
+server-id: server-1
+
+database:
+  host: 127.0.0.1
+  port: 3306
+  database: crossauction
+  username: crossauction
+  password: "change-me"
+  useSSL: false
+  pool-size: 10
+  connection-timeout-ms: 8000
+
+redis:
+  enabled: true
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  database: 0
+  channel: "crossauction:events"
+  lock-key: "crossauction:lock:expiry-sweep"
+
+economy:
+  # VAULT or INTERNAL - see docs/DEPLOYMENT.md before choosing VAULT.
+  provider: INTERNAL
+  currency-symbol: "$"
+  sale-tax-percent: 5.0
+
+auction:
+  max-active-listings-per-player: 10
+  default-duration-minutes: 2880
+  min-duration-minutes: 5
+  max-duration-minutes: 10080
+  min-price: 1.0
+  max-price: 1000000000.0
+  allow-bidding: true
+  min-bid-increment-percent: 5.0
+  action-cooldown-ms: 500
+  expiry-sweep-interval-seconds: 30
+  browse-cache-ttl-ms: 3000
+  listings-per-page: 45
+
+gui:
+  title: "Cross-Server Auction House"
+  rows: 6
+
+logging:
+  debug: false

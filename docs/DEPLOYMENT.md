@@ -6,9 +6,9 @@
    CREATE USER 'crossauction'@'%' IDENTIFIED BY 'change-me';
    GRANT ALL PRIVILEGES ON crossauction.* TO 'crossauction'@'%';
    ```
-   The plugin applies `schema.sql` automatically (idempotent `CREATE TABLE IF NOT EXISTS`) on first boot of each node - you do not need to run it manually.
+   The plugin applies `schema.sql` automatically (idempotent `CREATE TABLE IF NOT EXISTS`) on first boot of each node.
 
-2. **Stand up a Redis instance** reachable from every backend server (a single small instance is enough at this scale; see `docs/SCALING.md`).
+2. **Stand up a Redis instance** reachable from every backend server.
 
 3. **Build the plugin**: `./gradlew shadowJar`.
 
