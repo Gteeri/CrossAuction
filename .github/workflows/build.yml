@@ -2,33 +2,68 @@ name: Build CrossAuction
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
-  workflow_dispatch: {}
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.10'
+          gradle-version: 8.10
 
-      - name: Build shaded plugin jar
-        run: gradle build --no-daemon --stacktrace
+      - name: Build
+        id: gradle_build
+        run: gradle build --no-daemon --stacktrace 2>&1 | tee build.log
+        continue-on-error: true
 
-      - name: Upload plugin jar artifact
+      - name: Publish build log to ci-logs branch
+        if: always()
+        env:
+          GH_TOKEN: $ secrets.GITHUB_TOKEN 
+        run: |
+          set -e
+          mkdir -p /tmp/ci-logs-publish
+          cd /tmp/ci-logs-publish
+          git init -q
+          git remote add origin https://x-access-token:${GH_TOKEN}@github.com/$ github.repository .git
+          git fetch origin ci-logs || true
+          if git show-ref --verify --quiet refs/remotes/origin/ci-logs; then
+            git checkout -b ci-logs origin/ci-logs
+          else
+            git checkout --orphan ci-logs
+          fi
+          rm -rf ./*
+          cp "$GITHUB_WORKSPACE/build.log" ./last-build.log 2>/dev/null || echo "no log captured" > ./last-build.log
+          printf "commit: %s\nrun_id: %s\nrun_attempt: %s\noutcome: %s\n" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$ steps.gradle_build.outcome " > ./last-build-info.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "ci: update build log [skip ci]" || echo "nothing to commit"
+          git push origin ci-logs --force
+
+      - name: Fail job if build failed
+        if: steps.gradle_build.outcome == 'failure'
+        run: exit 1
+
+      - name: Upload jar artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: CrossAuction-jar
