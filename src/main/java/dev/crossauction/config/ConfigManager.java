@@ -4,6 +4,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 
 public final class ConfigManager {
 
@@ -22,6 +23,10 @@ public final class ConfigManager {
     }
 
     public String serverId() { return cfg.getString("server-id", "server-1"); }
+
+    public String dbType() { return cfg.getString("database.type", "SQLITE").toUpperCase(Locale.ROOT); }
+    public boolean isSqlite() { return dbType().equals("SQLITE"); }
+    public String sqliteFile() { return cfg.getString("database.sqlite-file", "crossauction.db"); }
 
     public String dbHost() { return cfg.getString("database.host", "127.0.0.1"); }
     public int dbPort() { return cfg.getInt("database.port", 3306); }

@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import dev.crossauction.config.ConfigManager;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -19,43 +20,70 @@ import java.util.logging.Logger;
 
 /**
  * Owns the single HikariCP pool shared by every code path in the plugin.
- * Every backend server in the network points this at the SAME MySQL
- * instance, which is what makes listings/claims/balances consistent
- * network-wide.
+ *
+ * Two backends are supported (see database.type in config.yml):
+ * - MYSQL: every backend server in the network points this at the SAME
+ *   MySQL instance, which is what makes listings/claims/balances consistent
+ *   network-wide. Row-level {@code SELECT ... FOR UPDATE} locking serializes
+ *   concurrent access to the same row from any server.
+ * - SQLITE: a single local file, intended only for quick single-server
+ *   testing (never cross-server). The Hikari pool is capped at 1 connection,
+ *   which - combined with {@link #transaction(SqlFunction)} always running
+ *   on a worker pool - gives the same full-mutual-exclusion guarantee that
+ *   {@code FOR UPDATE} gives on MySQL, without needing that clause (SQLite
+ *   doesn't support it).
  *
  * {@link #transaction(SqlFunction)} always runs off the calling thread (on
- * a small dedicated worker pool sized to the JDBC pool) and returns a
- * {@link CompletableFuture}, so callers never block Bukkit's main/region
- * threads - required for Folia and for staying responsive at ~1000
- * concurrent players.
+ * a small dedicated worker pool) and returns a {@link CompletableFuture},
+ * so callers never block Bukkit's main/region threads - required for Folia
+ * and for staying responsive at ~1000 concurrent players.
  */
 public final class DatabaseManager {
 
     private final ConfigManager cfg;
     private final Logger logger;
+    private final File dataFolder;
     private HikariDataSource dataSource;
     private ExecutorService executor;
 
-    public DatabaseManager(ConfigManager cfg, Logger logger) {
+    public DatabaseManager(ConfigManager cfg, Logger logger, File dataFolder) {
         this.cfg = cfg;
         this.logger = logger;
+        this.dataFolder = dataFolder;
     }
 
     public void connect() {
         HikariConfig hc = new HikariConfig();
-        String jdbcUrl = "jdbc:mysql://" + cfg.dbHost() + ":" + cfg.dbPort() + "/" + cfg.dbName()
-                + "?useSSL=" + cfg.dbUseSsl() + "&useUnicode=true&characterEncoding=utf8&serverTimezone=UTC";
-        hc.setJdbcUrl(jdbcUrl);
-        hc.setUsername(cfg.dbUser());
-        hc.setPassword(cfg.dbPassword());
-        hc.setMaximumPoolSize(cfg.dbPoolSize());
-        hc.setConnectionTimeout(cfg.dbConnectionTimeoutMs());
-        hc.setPoolName("CrossAuction-" + cfg.serverId());
-        hc.addDataSourceProperty("cachePrepStmts", "true");
-        hc.addDataSourceProperty("prepStmtCacheSize", "250");
-        hc.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        int poolSize;
+        if (cfg.isSqlite()) {
+            if (!dataFolder.exists()) {
+                dataFolder.mkdirs();
+            }
+            File dbFile = new File(dataFolder, cfg.sqliteFile());
+            String jdbcUrl = "jdbc:sqlite:" + dbFile.getAbsolutePath()
+                    + "?journal_mode=WAL&busy_timeout=10000&synchronous=NORMAL";
+            hc.setDriverClassName("org.sqlite.JDBC");
+            hc.setJdbcUrl(jdbcUrl);
+            poolSize = 1;
+            hc.setMaximumPoolSize(poolSize);
+            hc.setConnectionTimeout(cfg.dbConnectionTimeoutMs());
+            hc.setPoolName("CrossAuction-" + cfg.serverId());
+        } else {
+            String jdbcUrl = "jdbc:mysql://" + cfg.dbHost() + ":" + cfg.dbPort() + "/" + cfg.dbName()
+                    + "?useSSL=" + cfg.dbUseSsl() + "&useUnicode=true&characterEncoding=utf8&serverTimezone=UTC";
+            hc.setJdbcUrl(jdbcUrl);
+            hc.setUsername(cfg.dbUser());
+            hc.setPassword(cfg.dbPassword());
+            poolSize = cfg.dbPoolSize();
+            hc.setMaximumPoolSize(poolSize);
+            hc.setConnectionTimeout(cfg.dbConnectionTimeoutMs());
+            hc.setPoolName("CrossAuction-" + cfg.serverId());
+            hc.addDataSourceProperty("cachePrepStmts", "true");
+            hc.addDataSourceProperty("prepStmtCacheSize", "250");
+            hc.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        }
         this.dataSource = new HikariDataSource(hc);
-        this.executor = Executors.newFixedThreadPool(Math.max(2, cfg.dbPoolSize()), r -> {
+        this.executor = Executors.newFixedThreadPool(Math.max(2, poolSize), r -> {
             Thread t = new Thread(r, "CrossAuction-DB-Worker");
             t.setDaemon(true);
             return t;
@@ -64,9 +92,10 @@ public final class DatabaseManager {
     }
 
     private void applySchema() {
-        try (InputStream in = getClass().getClassLoader().getResourceAsStream("schema.sql")) {
+        String resourceName = cfg.isSqlite() ? "schema-sqlite.sql" : "schema.sql";
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream(resourceName)) {
             if (in == null) {
-                logger.warning("schema.sql not found on classpath, skipping auto-migration.");
+                logger.warning(resourceName + " not found on classpath, skipping auto-migration.");
                 return;
             }
             String sql;
@@ -100,10 +129,10 @@ public final class DatabaseManager {
      * Runs {@code body} inside a single JDBC transaction (autoCommit off)
      * on a background worker thread, committing on success and rolling
      * back on any exception. All money/state-mutating repository calls
-     * MUST go through this so that concurrent requests from different
-     * backend servers serialize safely via {@code SELECT ... FOR UPDATE}
-     * row locks in MySQL, and so Bukkit's main/region threads are never
-     * blocked on JDBC I/O.
+     * MUST go through this so that concurrent requests serialize safely
+     * (via row locks on MySQL, or via the single-connection pool on
+     * SQLite), and so Bukkit's main/region threads are never blocked on
+     * JDBC I/O.
      */
     public <T> CompletableFuture<T> transaction(SqlFunction<Connection, T> body) {
         return CompletableFuture.supplyAsync(() -> runTransaction(body), executor);

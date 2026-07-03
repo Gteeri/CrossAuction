@@ -13,9 +13,9 @@ import java.util.UUID;
 
 /**
  * Self-contained network-wide balance ledger stored in ca_balances, in the
- * SAME MySQL database as listings. Recommended when the server network
- * doesn't already have a synced (network-wide) economy plugin, since it
- * guarantees every backend server sees the same balance at all times.
+ * SAME database as listings. Recommended when the server network doesn't
+ * already have a synced (network-wide) economy plugin, since it guarantees
+ * every backend server sees the same balance at all times.
  */
 public final class InternalEconomyProvider implements EconomyProvider {
 
@@ -33,7 +33,7 @@ public final class InternalEconomyProvider implements EconomyProvider {
     }
 
     private BigDecimal getOrCreateForUpdate(Connection conn, UUID player) throws SQLException {
-        String select = "SELECT balance FROM ca_balances WHERE player_uuid = ? FOR UPDATE";
+        String select = "SELECT balance FROM ca_balances WHERE player_uuid = ?" + (cfg.isSqlite() ? "" : " FOR UPDATE");
         try (PreparedStatement ps = conn.prepareStatement(select)) {
             ps.setString(1, player.toString());
             try (ResultSet rs = ps.executeQuery()) {

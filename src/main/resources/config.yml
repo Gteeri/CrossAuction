@@ -1,10 +1,24 @@
 # CrossAuction configuration
 # IMPORTANT: every backend server in the network must point at the SAME
-# database.* and redis.* target. Only server-id should differ per server.
+# database.* and redis.* target (when using MYSQL/redis for production).
+# Only server-id should differ per server.
 
 server-id: "server-1"
 
 database:
+  # SQLITE - zero-config, single local file, no external service needed.
+  #   Great for quick local testing (e.g. a single Pterodactyl test server),
+  #   but it is NOT cross-server: each backend server would get its own
+  #   separate file, which defeats the whole point of this plugin. Only
+  #   ever run SQLITE on one standalone test server.
+  # MYSQL  - required for real cross-server / production use. Every backend
+  #   server in the network MUST point at the exact same MySQL instance.
+  type: "SQLITE"
+
+  # Used only when type: SQLITE. Path is relative to the plugin's data folder.
+  sqlite-file: "crossauction.db"
+
+  # Used only when type: MYSQL.
   host: "127.0.0.1"
   port: 3306
   database: "crossauction"
@@ -15,7 +29,10 @@ database:
   connection-timeout-ms: 8000
 
 redis:
-  enabled: true
+  # Only needed for cross-server pub/sub + the expiry-sweep lock. Leave this
+  # false while testing on a single server with SQLITE - there's nothing to
+  # synchronize yet, and the node will safely sweep independently.
+  enabled: false
   host: "127.0.0.1"
   port: 6379
   password: ""

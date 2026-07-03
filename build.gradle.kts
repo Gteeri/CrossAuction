@@ -26,6 +26,11 @@ dependencies {
 
     implementation("com.zaxxer:HikariCP:6.2.1")
     implementation("com.mysql:mysql-connector-j:9.1.0")
+    // SQLite backend for single-server testing (see database.type in config.yml).
+    // Intentionally NOT relocated below: sqlite-jdbc's native library loader
+    // looks up its bundled .so/.dll resources using hardcoded "org/sqlite/..."
+    // paths, and relocating the package breaks that lookup.
+    implementation("org.xerial:sqlite-jdbc:3.47.1.0")
     implementation("redis.clients:jedis:5.2.0")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
     implementation("com.google.code.gson:gson:2.11.0")

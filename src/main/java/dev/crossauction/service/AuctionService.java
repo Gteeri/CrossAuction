@@ -25,15 +25,15 @@ import java.util.concurrent.CompletableFuture;
 /**
  * All auction-house business logic. Every public method that touches money
  * or listing state runs inside {@link DatabaseManager#transaction} on the
- * shared MySQL database so it is safe regardless of which of the (possibly
- * many, up to ~1000-player-supporting) backend servers calls it
- * concurrently. Returned futures complete on the DB executor; callers MUST
- * hop back to the main/region thread before touching Bukkit API objects.
+ * shared database so it is safe regardless of which of the (possibly many,
+ * up to ~1000-player-supporting) backend servers calls it concurrently.
+ * Returned futures complete on the DB executor; callers MUST hop back to
+ * the main/region thread before touching Bukkit API objects.
  */
 public final class AuctionService {
 
     private final DatabaseManager db;
-    private final AuctionRepository repo = new AuctionRepository();
+    private final AuctionRepository repo;
     private final EconomyProvider economy;
     private final RedisManager redis;
     private final BrowseCache browseCache;
@@ -45,6 +45,7 @@ public final class AuctionService {
         this.redis = redis;
         this.browseCache = browseCache;
         this.cfg = cfg;
+        this.repo = new AuctionRepository(cfg);
     }
 
     public CompletableFuture<Long> createListing(UUID seller, String sellerName, ItemStack item, ListingType type,

@@ -19,7 +19,8 @@ import java.util.logging.Logger;
  * short-lived Redis lock), which keeps this O(1) extra load regardless of
  * how many backend servers exist. If Redis is disabled, every node runs its
  * own sweep; this stays correct because every mutation is still guarded by
- * a `FOR UPDATE` row lock and an ACTIVE status check.
+ * a `FOR UPDATE` row lock (MySQL) or the single-connection pool (SQLite)
+ * plus an ACTIVE status check.
  */
 public final class ExpirySweepService {
 
@@ -27,7 +28,7 @@ public final class ExpirySweepService {
     private static final long LOCK_TTL_MS = 25_000L;
 
     private final DatabaseManager db;
-    private final AuctionRepository repo = new AuctionRepository();
+    private final AuctionRepository repo;
     private final EconomyProvider economy;
     private final RedisManager redis;
     private final BrowseCache browseCache;
@@ -42,6 +43,7 @@ public final class ExpirySweepService {
         this.browseCache = browseCache;
         this.cfg = cfg;
         this.logger = logger;
+        this.repo = new AuctionRepository(cfg);
     }
 
     public void sweepOnce() {

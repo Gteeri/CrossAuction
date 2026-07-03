@@ -1,5 +1,6 @@
 package dev.crossauction.db;
 
+import dev.crossauction.config.ConfigManager;
 import dev.crossauction.model.AuctionClaim;
 import dev.crossauction.model.AuctionListing;
 import dev.crossauction.model.ListingStatus;
@@ -18,13 +19,24 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Raw SQL access, matching schema.sql exactly. All money/state-changing
- * methods that take a {@link Connection} are meant to be called from inside
- * {@link DatabaseManager#transaction}, using {@code SELECT ... FOR UPDATE}
- * to serialize concurrent access to a single row regardless of which of the
- * many backend servers issued the request.
+ * Raw SQL access, matching schema.sql (MySQL) / schema-sqlite.sql (SQLite)
+ * exactly. All money/state-changing methods that take a {@link Connection}
+ * are meant to be called from inside {@link DatabaseManager#transaction}.
+ *
+ * On MySQL, row reads that precede a mutation use {@code SELECT ... FOR
+ * UPDATE} to serialize concurrent access to a single row regardless of
+ * which of the many backend servers issued the request. SQLite doesn't
+ * support that clause, but doesn't need it either: {@link DatabaseManager}
+ * caps the SQLite connection pool at 1, so every transaction is already
+ * fully serialized.
  */
 public final class AuctionRepository {
+
+    private final boolean sqlite;
+
+    public AuctionRepository(ConfigManager cfg) {
+        this.sqlite = cfg.isSqlite();
+    }
 
     public long insertListing(Connection conn, AuctionListing l) throws SQLException {
         String sql = "INSERT INTO ca_listings (seller_uuid, seller_name, item_data, item_amount, item_display, " +
@@ -53,7 +65,7 @@ public final class AuctionRepository {
     }
 
     public Optional<AuctionListing> findByIdForUpdate(Connection conn, long id) throws SQLException {
-        String sql = "SELECT * FROM ca_listings WHERE id = ? FOR UPDATE";
+        String sql = "SELECT * FROM ca_listings WHERE id = ?" + (sqlite ? "" : " FOR UPDATE");
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -96,7 +108,8 @@ public final class AuctionRepository {
     }
 
     public List<Long> findExpiredIds(Connection conn, int limit) throws SQLException {
-        String sql = "SELECT id FROM ca_listings WHERE status = 'ACTIVE' AND expires_at <= NOW() LIMIT ?";
+        String nowExpr = sqlite ? "CURRENT_TIMESTAMP" : "NOW()";
+        String sql = "SELECT id FROM ca_listings WHERE status = 'ACTIVE' AND expires_at <= " + nowExpr + " LIMIT ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, limit);
             try (ResultSet rs = ps.executeQuery()) {
@@ -108,8 +121,9 @@ public final class AuctionRepository {
     }
 
     public void markResolved(Connection conn, long id, ListingStatus status, UUID bidderUuid, String bidderName) throws SQLException {
+        String nowExpr = sqlite ? "CURRENT_TIMESTAMP" : "NOW()";
         String sql = "UPDATE ca_listings SET status=?, current_bidder_uuid=COALESCE(?, current_bidder_uuid), " +
-                "current_bidder_name=COALESCE(?, current_bidder_name), resolved_at=NOW(), version=version+1 WHERE id=?";
+                "current_bidder_name=COALESCE(?, current_bidder_name), resolved_at=" + nowExpr + ", version=version+1 WHERE id=?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, status.name());
             ps.setString(2, bidderUuid == null ? null : bidderUuid.toString());
@@ -202,7 +216,8 @@ public final class AuctionRepository {
     }
 
     public void markClaimed(Connection conn, long claimId) throws SQLException {
-        String sql = "UPDATE ca_claims SET claimed = 1, claimed_at = NOW() WHERE id = ?";
+        String nowExpr = sqlite ? "CURRENT_TIMESTAMP" : "NOW()";
+        String sql = "UPDATE ca_claims SET claimed = 1, claimed_at = " + nowExpr + " WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, claimId);
             ps.executeUpdate();

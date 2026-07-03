@@ -27,13 +27,16 @@ import org.bukkit.plugin.java.JavaPlugin;
  *
  * Architecture summary (see docs/ARCHITECTURE.md and docs/SCALING.md):
  * - MySQL (via HikariCP) is the single source of truth for listings,
- *   claims, history and (optionally) balances. All state changes run
- *   inside row-locked transactions so concurrent servers never race.
+ *   claims, history and (optionally) balances in production. All state
+ *   changes run inside row-locked transactions so concurrent servers never
+ *   race. SQLite is also supported (database.type: SQLITE) for zero-config
+ *   single-server testing only - never use it across more than one server.
  * - Redis is used only for pub/sub cache invalidation/notifications and a
  *   lightweight distributed lock for the expiry sweep - never for
  *   correctness-critical state.
  * - A local Caffeine cache absorbs the GUI browse-read load so opening the
- *   auction house doesn't hit MySQL on every click across the whole network.
+ *   auction house doesn't hit the database on every click across the whole
+ *   network.
  * - All Bukkit API interaction is dispatched through SchedulerUtil, which
  *   uses Paper's region-aware schedulers so the plugin works unmodified on
  *   both Folia and regular Paper.
@@ -59,11 +62,11 @@ public final class CrossAuctionPlugin extends JavaPlugin {
         this.messages = new Messages(this);
         this.chatInputManager = new ChatInputManager(this);
 
-        this.databaseManager = new DatabaseManager(configManager, getLogger());
+        this.databaseManager = new DatabaseManager(configManager, getLogger(), getDataFolder());
         try {
             databaseManager.connect();
         } catch (Exception e) {
-            getLogger().severe("Failed to connect to MySQL - disabling CrossAuction: " + e.getMessage());
+            getLogger().severe("Failed to connect to the database (" + configManager.dbType() + ") - disabling CrossAuction: " + e.getMessage());
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -102,7 +105,7 @@ public final class CrossAuctionPlugin extends JavaPlugin {
 
         SchedulerUtil.runAsyncRepeating(this, expirySweepService::sweepOnce, 10, 10);
 
-        getLogger().info("CrossAuction enabled on server-id '" + configManager.serverId() + "' (redis " +
+        getLogger().info("CrossAuction enabled on server-id '" + configManager.serverId() + "' (db " + configManager.dbType() + ", redis " +
                 (redisManager.isEnabled() ? "enabled" : "disabled") + ").");
     }
 
