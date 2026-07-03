@@ -4,25 +4,26 @@ main: dev.crossauction.CrossAuctionPlugin
 api-version: '1.21'
 folia-supported: true
 author: Gteeri
+description: Cross-server auction house for Paper/Folia networks.
 
 commands:
   auction:
-    aliases: [ah, auc]
     description: Open the cross-server auction house.
+    aliases: [ah, auc]
   crossauction:
-    aliases: [cah, cauc]
     description: CrossAuction admin management.
+    aliases: [cah, cauc]
     permission: crossauction.admin
 
 permissions:
   crossauction.use:
-    description: Allows opening the auction house GUI.
+    description: Allows opening and browsing the auction house.
     default: true
   crossauction.sell:
     description: Allows listing items on the auction house.
     default: true
   crossauction.sell.bypasslimit:
-    description: Bypasses the max-active-listings-per-player limit.
+    description: Bypasses the maximum active listings per player limit.
     default: op
   crossauction.admin:
     description: Allows CrossAuction admin management commands.

@@ -1,13 +1,14 @@
-# Unique identifier for THIS backend server. Must be different on every node
-# in the network, but every other setting below should point at the SAME
-# shared MySQL/Redis instances across all nodes.
-server-id: server-1
+# CrossAuction configuration
+# IMPORTANT: every backend server in the network must point at the SAME
+# database.* and redis.* target. Only server-id should differ per server.
+
+server-id: "server-1"
 
 database:
-  host: 127.0.0.1
+  host: "127.0.0.1"
   port: 3306
-  database: crossauction
-  username: crossauction
+  database: "crossauction"
+  username: "crossauction"
   password: "change-me"
   useSSL: false
   pool-size: 10
@@ -15,7 +16,7 @@ database:
 
 redis:
   enabled: true
-  host: 127.0.0.1
+  host: "127.0.0.1"
   port: 6379
   password: ""
   database: 0
@@ -24,7 +25,7 @@ redis:
 
 economy:
   # VAULT or INTERNAL - see docs/DEPLOYMENT.md before choosing VAULT.
-  provider: INTERNAL
+  provider: "INTERNAL"
   currency-symbol: "$"
   sale-tax-percent: 5.0
 
@@ -43,7 +44,7 @@ auction:
   listings-per-page: 45
 
 gui:
-  title: "Cross-Server Auction House"
+  title: "<dark_gray>Cross-Server Auction House"
   rows: 6
 
 logging:
