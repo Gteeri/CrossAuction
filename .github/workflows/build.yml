@@ -28,39 +28,35 @@ jobs:
         with:
           gradle-version: 8.10
 
-      - name: Build
-        id: gradle_build
-        run: gradle build --no-daemon --stacktrace 2>&1 | tee build.log
-        continue-on-error: true
-
-      - name: Publish build log to ci-logs branch
-        if: always()
-        env:
-          GH_TOKEN: $ secrets.GITHUB_TOKEN 
+      - name: Build and publish log
+        shell: bash
         run: |
+          set +e
+          gradle build --no-daemon --stacktrace 2>&1 | tee build.log
+          BUILD_EXIT=${PIPESTATUS[0]}
           set -e
-          mkdir -p /tmp/ci-logs-publish
-          cd /tmp/ci-logs-publish
-          git init -q
-          git remote add origin https://x-access-token:${GH_TOKEN}@github.com/$ github.repository .git
-          git fetch origin ci-logs || true
-          if git show-ref --verify --quiet refs/remotes/origin/ci-logs; then
-            git checkout -b ci-logs origin/ci-logs
-          else
-            git checkout --orphan ci-logs
-          fi
-          rm -rf ./*
-          cp "$GITHUB_WORKSPACE/build.log" ./last-build.log 2>/dev/null || echo "no log captured" > ./last-build.log
-          printf "commit: %s\nrun_id: %s\nrun_attempt: %s\noutcome: %s\n" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$ steps.gradle_build.outcome " > ./last-build-info.txt
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "ci: update build log [skip ci]" || echo "nothing to commit"
-          git push origin ci-logs --force
 
-      - name: Fail job if build failed
-        if: steps.gradle_build.outcome == 'failure'
-        run: exit 1
+          mkdir -p /tmp/ci-logs-content
+          cp build.log /tmp/ci-logs-content/last-build.log
+          printf "commit: %s\nrun_id: %s\nrun_attempt: %s\nexit_code: %s\n" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$BUILD_EXIT" > /tmp/ci-logs-content/last-build-info.txt
+
+          BLOB_LOG=$(git hash-object -w /tmp/ci-logs-content/last-build.log)
+          BLOB_INFO=$(git hash-object -w /tmp/ci-logs-content/last-build-info.txt)
+          TREE=$(printf "100644 blob %s\tlast-build.log\n100644 blob %s\tlast-build-info.txt\n" "$BLOB_LOG" "$BLOB_INFO" | git mktree)
+
+          git fetch origin ci-logs || true
+          PARENT=$(git rev-parse --verify origin/ci-logs 2>/dev/null || echo "")
+          if [ -n "$PARENT" ]; then
+            COMMIT=$(echo "ci: update build log [skip ci]" | git commit-tree "$TREE" -p "$PARENT")
+          else
+            COMMIT=$(echo "ci: update build log [skip ci]" | git commit-tree "$TREE")
+          fi
+          git push origin "$COMMIT:refs/heads/ci-logs" --force
+
+          exit $BUILD_EXIT
 
       - name: Upload jar artifact
         if: success()
