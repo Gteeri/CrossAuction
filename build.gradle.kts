@@ -1,5 +1,3 @@
-import com.gradleup.shadow.tasks.ShadowJar
-
 plugins {
     java
     id("com.gradleup.shadow") version "8.3.5"
@@ -46,7 +44,7 @@ tasks {
         }
     }
 
-    named<ShadowJar>("shadowJar") {
+    shadowJar {
         archiveClassifier.set("")
         mergeServiceFiles()
 
