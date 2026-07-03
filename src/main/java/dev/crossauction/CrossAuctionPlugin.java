@@ -57,7 +57,7 @@ public final class CrossAuctionPlugin extends JavaPlugin {
 
         this.configManager = new ConfigManager(this);
         this.messages = new Messages(this);
-        this.chatInputManager = new ChatInputManager();
+        this.chatInputManager = new ChatInputManager(this);
 
         this.databaseManager = new DatabaseManager(configManager, getLogger());
         try {
@@ -138,5 +138,9 @@ public final class CrossAuctionPlugin extends JavaPlugin {
 
     public ExpirySweepService expirySweepService() {
         return expirySweepService;
+    }
+
+    public Messages messages() {
+        return messages;
     }
 }

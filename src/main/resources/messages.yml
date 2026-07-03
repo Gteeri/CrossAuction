@@ -4,7 +4,7 @@ no-permission: "<red>You don't have permission to do that."
 unknown-command: "<red>Unknown usage. Try /auction, /auction sell <price> [minutes], /auction auction <price> [minutes], /auction cancel <id>, /auction collect, /auction search <query>."
 cooldown: "<red>Please wait a moment before doing that again."
 
-listing-created: "<green>Listed <white>{item}</white> for <yellow>{price}</yellow>."
+listing-created: "<green>Listing created!"
 listing-created-error: "<red>Failed to create the listing. Please try again."
 listing-limit-reached: "<red>You already have the maximum number of active listings."
 listing-not-found: "<red>That listing no longer exists."
@@ -24,6 +24,7 @@ cancelled: "<green>Listing cancelled and item returned to your collection box."
 cannot-cancel: "<red>You can't cancel that listing."
 
 collect-none: "<yellow>You have nothing to collect right now."
+nothing-to-collect: "<yellow>You have nothing to collect right now."
 collect-success: "<green>Collected {count} item(s)/payout(s)."
 inventory-full-dropped: "<yellow>Your inventory was full, so the item was dropped at your feet."
 expired-returned: "<yellow>Your listing for <white>{item}</white> expired with no buyer and was returned to your collection box."
@@ -32,5 +33,43 @@ reloaded: "<green>CrossAuction configuration reloaded."
 admin-listing-removed: "<green>Removed listing #{id} and returned the item to its seller."
 
 search-header: "<gray>Searching for: <white>{query}"
-chat-input-prompt: "<yellow>Type {prompt} in chat."
+chat-input-prompt: "<yellow>Type an amount of at least {amount} in chat to place your bid."
 items-waiting: "<yellow>You have {count} item(s)/payout(s) waiting on the auction house! Use /auction collect."
+
+purchase-success: "<green>Purchase successful! Use /auction collect to receive your item(s)."
+bid-success: "<green>Bid placed! You'll be refunded automatically if someone outbids you."
+
+usage:
+  auction: "<red>Usage: /auction, /auction sell <bin|auction> <price> [minBidIncrement], /auction search <query>"
+  sell: "<red>Usage: /auction sell <bin|auction> <price> [minBidIncrement]"
+  auctionadmin: "<red>Usage: /auctionadmin cancel <id>, /auctionadmin forcesweep"
+
+error:
+  no-permission: "<red>You don't have permission to do that."
+  generic: "<red>Something went wrong. Please try again."
+  invalid-number: "<red>Please enter a valid number."
+  no-item-in-hand: "<red>Hold the item you want to list in your main hand."
+  max-listings: "<red>You already have the maximum number of active listings."
+  listing-not-found: "<red>That listing no longer exists."
+  listing-not-active: "<red>That listing is no longer active."
+  listing-not-buyable: "<red>That listing can't be bought directly."
+  cannot-buy-own: "<red>You can't buy your own listing."
+  insufficient-funds: "<red>You don't have enough money for that."
+  cannot-bid-own: "<red>You can't bid on your own listing."
+  bid-too-low: "<red>Your bid must be higher than the current bid plus the minimum increment."
+  not-your-listing: "<red>That isn't your listing."
+
+admin:
+  cancel-success: "<green>Listing cancelled by an admin and the item was returned to its seller."
+  sweep-triggered: "<green>Expiry sweep triggered."
+
+gui:
+  title: "<dark_gray>Cross-Server Auction House"
+  previous-page: "<yellow>\u00ab Previous Page"
+  next-page: "<yellow>Next Page \u00bb"
+  close: "<red>Close"
+  lore:
+    seller: "<gray>Seller: <white>{seller}"
+    price: "<gray>Price: <yellow>{price}"
+    current-bid: "<gray>Current bid: <yellow>{price}"
+    min-next-bid: "<gray>Min next bid: <yellow>{price}"

@@ -37,6 +37,11 @@ public final class Messages {
         return messages.getString(key, key);
     }
 
+    /** Raw (un-prefixed) message text for a key, for inline use in commands/GUI/chat. */
+    public String get(String key) {
+        return raw(key);
+    }
+
     public void send(CommandSender to, String key) {
         send(to, key, Map.of());
     }

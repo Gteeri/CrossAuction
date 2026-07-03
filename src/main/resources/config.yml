@@ -38,6 +38,7 @@ auction:
   max-price: 1000000000.0
   allow-bidding: true
   min-bid-increment-percent: 5.0
+  default-min-bid-increment: 1.0
   action-cooldown-ms: 500
   expiry-sweep-interval-seconds: 30
   browse-cache-ttl-ms: 3000

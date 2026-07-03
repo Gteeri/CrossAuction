@@ -12,6 +12,9 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 /**
@@ -19,12 +22,19 @@ import java.util.logging.Logger;
  * Every backend server in the network points this at the SAME MySQL
  * instance, which is what makes listings/claims/balances consistent
  * network-wide.
+ *
+ * {@link #transaction(SqlFunction)} always runs off the calling thread (on
+ * a small dedicated worker pool sized to the JDBC pool) and returns a
+ * {@link CompletableFuture}, so callers never block Bukkit's main/region
+ * threads - required for Folia and for staying responsive at ~1000
+ * concurrent players.
  */
 public final class DatabaseManager {
 
     private final ConfigManager cfg;
     private final Logger logger;
     private HikariDataSource dataSource;
+    private ExecutorService executor;
 
     public DatabaseManager(ConfigManager cfg, Logger logger) {
         this.cfg = cfg;
@@ -45,6 +55,11 @@ public final class DatabaseManager {
         hc.addDataSourceProperty("prepStmtCacheSize", "250");
         hc.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         this.dataSource = new HikariDataSource(hc);
+        this.executor = Executors.newFixedThreadPool(Math.max(2, cfg.dbPoolSize()), r -> {
+            Thread t = new Thread(r, "CrossAuction-DB-Worker");
+            t.setDaemon(true);
+            return t;
+        });
         applySchema();
     }
 
@@ -82,13 +97,19 @@ public final class DatabaseManager {
     }
 
     /**
-     * Runs {@code body} inside a single JDBC transaction (autoCommit off),
-     * committing on success and rolling back on any exception. All
-     * money/state-mutating repository calls MUST go through this so that
-     * concurrent requests from different backend servers serialize safely
-     * via {@code SELECT ... FOR UPDATE} row locks in MySQL.
+     * Runs {@code body} inside a single JDBC transaction (autoCommit off)
+     * on a background worker thread, committing on success and rolling
+     * back on any exception. All money/state-mutating repository calls
+     * MUST go through this so that concurrent requests from different
+     * backend servers serialize safely via {@code SELECT ... FOR UPDATE}
+     * row locks in MySQL, and so Bukkit's main/region threads are never
+     * blocked on JDBC I/O.
      */
-    public <T> T transaction(SqlFunction<Connection, T> body) {
+    public <T> CompletableFuture<T> transaction(SqlFunction<Connection, T> body) {
+        return CompletableFuture.supplyAsync(() -> runTransaction(body), executor);
+    }
+
+    private <T> T runTransaction(SqlFunction<Connection, T> body) {
         try (Connection conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
             try {
@@ -108,6 +129,9 @@ public final class DatabaseManager {
     }
 
     public void shutdown() {
+        if (executor != null) {
+            executor.shutdown();
+        }
         if (dataSource != null) {
             dataSource.close();
         }

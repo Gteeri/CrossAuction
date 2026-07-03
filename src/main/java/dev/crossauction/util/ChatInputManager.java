@@ -35,6 +35,11 @@ public final class ChatInputManager implements Listener {
         plugin.messages().send(player, "chat-input-prompt", Map.of("prompt", prompt));
     }
 
+    /** Waits for the player's next chat line without sending its own prompt (caller already sent one). */
+    public void awaitInput(Player player, Consumer<String> callback) {
+        pending.put(player.getUniqueId(), new PendingRequest(null, callback));
+    }
+
     public void cancel(UUID player) {
         pending.remove(player);
     }

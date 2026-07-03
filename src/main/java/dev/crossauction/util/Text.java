@@ -9,7 +9,7 @@ public final class Text {
 
     private Text() {}
 
-    public static Component parse(String raw) {
+    public static Component mm(String raw) {
         return MINI_MESSAGE.deserialize(raw == null ? "" : raw);
     }
 }
