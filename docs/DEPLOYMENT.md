@@ -6,11 +6,11 @@
    CREATE USER 'crossauction'@'%' IDENTIFIED BY 'change-me';
    GRANT ALL PRIVILEGES ON crossauction.* TO 'crossauction'@'%';
    ```
-   The plugin applies `schema.sql` automatically (idempotent `CREATE TABLE IF NOT EXISTS`) on first boot of each node.
+   The plugin applies `schema.sql` automatically (idempotent `CREATE TABLE IF NOT EXISTS`) on first boot of each node - you do not need to run it manually.
 
-2. **Stand up a Redis instance** reachable from every backend server.
+2. **Stand up a Redis instance** reachable from every backend server (a single small instance is enough at this scale; see `docs/SCALING.md`).
 
-3. **Build the plugin**: `./gradlew shadowJar`.
+3. **Build the plugin**: `./gradlew shadowJar` (requires internet access to download dependencies).
 
 4. **Configure every backend server identically**, except for `server-id`, which must be unique per node (e.g. `survival-1`, `survival-2`, `skyblock-1`). Point `database.*` and `redis.*` at the same shared instances from step 1/2 on every node.
 

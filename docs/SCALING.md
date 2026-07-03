@@ -2,7 +2,7 @@
 
 ## Connection pooling
 
-`database.pool-size` (HikariCP) is **per backend server**, not network-wide. Keep it small (8-10) - with, say, 10 backend servers that's 80-100 total MySQL connections, which is comfortable for a properly tuned MySQL instance. Raising `max_connections` on the MySQL server itself and giving it enough `innodb_buffer_pool_size` to hold the working set matters far more than a large per-node pool.
+`database.pool-size` (HikariCP) is **per backend server**, not network-wide. Keep it small (8-10) - with, say, 10 backend servers that's 80-100 total MySQL connections, which is comfortable for a properly tuned MySQL instance. Raising `max_connections` on the MySQL server itself and giving it enough `innodb_buffer_pool_size` to hold the working set (a few hot tables, easily cacheable) matters far more than a large per-node pool.
 
 ## Read amplification
 
@@ -10,7 +10,7 @@ The browse GUI is the highest-traffic read path at 1000 concurrent players. `Bro
 
 ## Indexing
 
-`schema.sql` includes indexes for every access pattern the plugin actually uses: `status`, `expires_at`, `seller_uuid`, the combined `(status, created_at)` used by the browse query's `ORDER BY`, and `item_display` for search.
+`schema.sql` includes indexes for every access pattern the plugin actually uses: `status`, `expires_at`, `seller_uuid`, the combined `(status, created_at)` used by the browse query's `ORDER BY`, and `item_display` for search. If you add custom queries/reports, add matching indexes rather than scanning `ca_listings`/`ca_history`.
 
 ## Expiry sweep cost
 
